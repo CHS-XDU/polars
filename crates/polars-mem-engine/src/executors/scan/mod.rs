@@ -32,6 +32,58 @@ impl Executor for DataFrameExec {
     }
 }
 
+/// Producer of an execution-time rebound in-memory DataFrame.
+pub struct ReusableDataFrameExec {
+    pub(crate) source_id: PlSmallStr,
+    pub(crate) schema: SchemaRef,
+    pub(crate) projection: Option<Vec<PlSmallStr>>,
+    pub(crate) min_rows: Option<usize>,
+    pub(crate) max_rows: Option<usize>,
+}
+
+impl Executor for ReusableDataFrameExec {
+    fn execute(&mut self, _state: &mut ExecutionState) -> PolarsResult<DataFrame> {
+        let mut df =
+            polars_plan::plans::reusable_scan::get_reusable_frame_input(self.source_id.as_str())?;
+
+        polars_ensure!(
+            df.schema().as_ref() == self.schema.as_ref(),
+            SchemaMismatch:
+            "reusable source '{}' schema mismatch: expected {:?}, got {:?}",
+            self.source_id,
+            self.schema,
+            df.schema(),
+        );
+
+        if let Some(min_rows) = self.min_rows {
+            polars_ensure!(
+                df.height() >= min_rows,
+                ComputeError:
+                "reusable source '{}' row count {} is below lower bound {}",
+                self.source_id,
+                df.height(),
+                min_rows,
+            );
+        }
+        if let Some(max_rows) = self.max_rows {
+            polars_ensure!(
+                df.height() <= max_rows,
+                ComputeError:
+                "reusable source '{}' row count {} exceeds upper bound {}",
+                self.source_id,
+                df.height(),
+                max_rows,
+            );
+        }
+
+        if let Some(projection) = &self.projection {
+            df = df.select(projection.iter().cloned())?;
+        }
+
+        Ok(df)
+    }
+}
+
 pub(crate) struct AnonymousScanExec {
     pub(crate) function: Arc<dyn AnonymousScan>,
     pub(crate) unified_scan_args: Box<UnifiedScanArgs>,

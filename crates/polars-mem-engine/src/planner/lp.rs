@@ -521,6 +521,19 @@ fn create_physical_plan_impl(
             df,
             projection: output_schema.map(|s| s.iter_names_cloned().collect()),
         })),
+        ReusableDataFrameScan {
+            source_id,
+            schema,
+            output_schema,
+            min_rows,
+            max_rows,
+        } => Ok(Box::new(executors::ReusableDataFrameExec {
+            source_id,
+            schema,
+            projection: output_schema.map(|s| s.iter_names_cloned().collect()),
+            min_rows,
+            max_rows,
+        })),
         Sort {
             input,
             by_column,

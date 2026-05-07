@@ -42,7 +42,10 @@ pub(crate) fn fmt_column_delimited<S: AsRef<str>>(
 }
 
 pub(crate) fn is_scan(plan: &IR) -> bool {
-    matches!(plan, IR::Scan { .. } | IR::DataFrameScan { .. })
+    matches!(
+        plan,
+        IR::Scan { .. } | IR::DataFrameScan { .. } | IR::ReusableDataFrameScan { .. }
+    )
 }
 
 /// A projection that only takes a column or a column + alias.

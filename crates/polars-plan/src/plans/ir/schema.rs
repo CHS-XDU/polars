@@ -24,6 +24,7 @@ impl IR {
             Slice { .. } => "slice",
             Filter { .. } => "filter",
             DataFrameScan { .. } => "df",
+            ReusableDataFrameScan { .. } => "reusable_df",
             Select { .. } => "projection",
             Sort { .. } => "sort",
             Cache { .. } => "cache",
@@ -55,6 +56,7 @@ impl IR {
             #[cfg(feature = "python")]
             PythonScan { options } => &options.schema,
             DataFrameScan { schema, .. } => schema,
+            ReusableDataFrameScan { schema, .. } => schema,
             Scan { file_info, .. } => &file_info.schema,
             node => {
                 let input = node.get_input()?;
@@ -81,6 +83,11 @@ impl IR {
                 ..
             } => output_schema.as_ref().unwrap_or(&file_info.schema),
             DataFrameScan {
+                schema,
+                output_schema,
+                ..
+            } => output_schema.as_ref().unwrap_or(schema),
+            ReusableDataFrameScan {
                 schema,
                 output_schema,
                 ..
@@ -153,6 +160,11 @@ impl IR {
                 ..
             } => output_schema.as_ref().unwrap_or(&file_info.schema).clone(),
             DataFrameScan {
+                schema,
+                output_schema,
+                ..
+            } => output_schema.as_ref().unwrap_or(schema).clone(),
+            ReusableDataFrameScan {
                 schema,
                 output_schema,
                 ..

@@ -220,6 +220,22 @@ impl<'a> IRDotDisplay<'a> {
                     write!(f, "TABLE\nπ {num_columns}/{total_columns}")
                 })?;
             },
+            ReusableDataFrameScan {
+                source_id,
+                schema,
+                output_schema,
+                ..
+            } => {
+                let num_columns = NumColumnsSchema(output_schema.as_ref().map(|p| p.as_ref()));
+                let total_columns = schema.len();
+
+                write_label(f, id, |f| {
+                    write!(
+                        f,
+                        "REUSABLE TABLE {source_id}\nπ {num_columns}/{total_columns}"
+                    )
+                })?;
+            },
             Scan {
                 sources,
                 file_info,

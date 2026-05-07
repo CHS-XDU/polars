@@ -201,6 +201,19 @@ pub struct DataFrameScan {
 }
 
 #[pyclass(frozen)]
+/// Scan an execution-time rebound dataframe source
+pub struct ReusableDataFrameScan {
+    #[pyo3(get)]
+    source_id: String,
+    #[pyo3(get)]
+    projection: Py<PyAny>,
+    #[pyo3(get)]
+    min_rows: Option<usize>,
+    #[pyo3(get)]
+    max_rows: Option<usize>,
+}
+
+#[pyclass(frozen)]
 /// Project out columns from a table
 pub struct SimpleProjection {
     #[pyo3(get)]
@@ -471,6 +484,27 @@ pub(crate) fn into_py(py: Python<'_>, plan: &IR) -> PyResult<Py<PyAny>> {
                 },
             )?,
             selection: None,
+        }
+        .into_py_any(py),
+        IR::ReusableDataFrameScan {
+            source_id,
+            schema: _,
+            output_schema,
+            min_rows,
+            max_rows,
+        } => ReusableDataFrameScan {
+            source_id: source_id.to_string(),
+            projection: output_schema.as_ref().map_or_else(
+                || Ok(py.None()),
+                |s| {
+                    s.iter_names()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .into_py_any(py)
+                },
+            )?,
+            min_rows: *min_rows,
+            max_rows: *max_rows,
         }
         .into_py_any(py),
         IR::SimpleProjection { input, columns: _ } => {

@@ -20,6 +20,7 @@ use self::hive::HivePartitionsDf;
 use crate::prelude::*;
 
 #[cfg_attr(feature = "ir_serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone)]
 pub struct IRPlan {
     pub lp_top: Node,
     pub lp_arena: Arena<IR>,
@@ -72,6 +73,13 @@ pub enum IR {
         // Schema of the projected file
         // If `None`, no projection is applied
         output_schema: Option<SchemaRef>,
+    },
+    ReusableDataFrameScan {
+        source_id: PlSmallStr,
+        schema: SchemaRef,
+        output_schema: Option<SchemaRef>,
+        min_rows: Option<usize>,
+        max_rows: Option<usize>,
     },
     // Only selects columns (semantically only has row access).
     // This is a more restricted operation than `Select`.

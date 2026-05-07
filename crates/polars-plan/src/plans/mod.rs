@@ -22,6 +22,7 @@ pub(crate) mod optimizer;
 pub(crate) mod options;
 #[cfg(feature = "python")]
 pub mod python;
+pub mod reusable_scan;
 #[cfg(feature = "python")]
 pub use python::*;
 pub mod prune;

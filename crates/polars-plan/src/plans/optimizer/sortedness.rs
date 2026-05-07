@@ -238,7 +238,7 @@ fn is_sorted_rec(
             input,
             predicate: _,
         } => rec!(*input),
-        IR::Scan { .. } => None,
+        IR::Scan { .. } | IR::ReusableDataFrameScan { .. } => None,
         IR::DataFrameScan { df, .. } => {
             let last_is_null = |c: &Column| Some(c.get(c.len().checked_sub(1)?).ok()?.is_null());
             let sorted_cols = df

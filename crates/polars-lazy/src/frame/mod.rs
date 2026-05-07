@@ -2,6 +2,7 @@
 #[cfg(feature = "python")]
 mod python;
 
+mod auto_plan_cache;
 mod cached_arenas;
 mod err;
 #[cfg(not(target_arch = "wasm32"))]
@@ -648,6 +649,16 @@ impl LazyFrame {
             _ => (),
         }
 
+        let auto_plan_cache_seed = if matches!(engine, Engine::InMemory) {
+            auto_plan_cache::try_build_seed(&self.logical_plan, self.opt_state)?
+        } else {
+            None
+        };
+
+        if let Some(result) = auto_plan_cache::try_execute_seed(auto_plan_cache_seed.as_ref())? {
+            return Ok(result);
+        }
+
         let mut ir_plan = self.to_alp_optimized()?;
 
         ir_plan.ensure_root_node_is_sink();
@@ -676,6 +687,14 @@ impl LazyFrame {
                     )?
                     .execute()
                     .map(QueryResult::Multiple);
+                }
+
+                if matches!(engine, Engine::InMemory) {
+                    if let Some(result) =
+                        auto_plan_cache::try_collect(&ir_plan, auto_plan_cache_seed.as_ref())?
+                    {
+                        return Ok(result);
+                    }
                 }
 
                 let mut physical_plan = create_physical_plan(

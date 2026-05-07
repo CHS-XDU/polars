@@ -90,6 +90,10 @@ impl MemberCollector {
                 DataFrameScan { .. } => {
                     self.scans.insert(_node, lp_arena, _expr_arena);
                 },
+                #[cfg(feature = "cse")]
+                ReusableDataFrameScan { .. } => {
+                    self.scans.insert(_node, lp_arena, _expr_arena);
+                },
                 #[cfg(all(feature = "cse", feature = "python"))]
                 PythonScan { .. } => {
                     self.scans.insert(_node, lp_arena, _expr_arena);

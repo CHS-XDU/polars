@@ -463,6 +463,29 @@ impl SlicePushDown {
                 Ok(lp)
             },
             (
+                ReusableDataFrameScan {
+                    source_id,
+                    schema,
+                    output_schema,
+                    min_rows,
+                    max_rows,
+                },
+                Some(state),
+            ) => {
+                let input = lp_arena.add(ReusableDataFrameScan {
+                    source_id,
+                    schema,
+                    output_schema,
+                    min_rows,
+                    max_rows,
+                });
+                Ok(Slice {
+                    input,
+                    offset: state.offset,
+                    len: state.len,
+                })
+            },
+            (
                 Union {
                     mut inputs,
                     mut options,
@@ -760,6 +783,7 @@ impl SlicePushDown {
             },
             m @ (Filter { .. }, _)
             | m @ (DataFrameScan { .. }, _)
+            | m @ (ReusableDataFrameScan { .. }, _)
             | m @ (Sort { .. }, _)
             | m @ (
                 MapFunction {

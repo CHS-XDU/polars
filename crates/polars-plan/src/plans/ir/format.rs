@@ -818,6 +818,27 @@ pub fn write_ir_non_recursive(
                 total_columns,
             )
         },
+        IR::ReusableDataFrameScan {
+            source_id,
+            schema,
+            output_schema,
+            ..
+        } => {
+            let total_columns = schema.len();
+            let (n_columns, projected) = if let Some(schema) = output_schema {
+                (
+                    format!("{}", schema.len()),
+                    format_list_truncated!(schema.iter_names(), 4, '"'),
+                )
+            } else {
+                ("*".to_string(), "".to_string())
+            };
+            write!(
+                f,
+                "{:indent$}REUSABLE DF {}; PROJECT{} {}/{} COLUMNS",
+                "", source_id, projected, n_columns, total_columns,
+            )
+        },
         IR::SimpleProjection { input: _, columns } => {
             let num_columns = columns.as_ref().len();
             let total_columns = output_schema.len();

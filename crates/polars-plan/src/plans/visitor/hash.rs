@@ -154,6 +154,18 @@ impl Hash for IRHashWrap<'_> {
                 (Arc::as_ptr(df) as usize).hash(state);
                 output_schema.hash(state);
             },
+            IR::ReusableDataFrameScan {
+                source_id,
+                output_schema,
+                min_rows,
+                max_rows,
+                ..
+            } => {
+                source_id.hash(state);
+                output_schema.hash(state);
+                min_rows.hash(state);
+                max_rows.hash(state);
+            },
             IR::SimpleProjection { columns, input: _ } => {
                 columns.hash(state);
             },

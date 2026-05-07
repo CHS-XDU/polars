@@ -49,8 +49,13 @@ impl Executor for JoinExec {
         if state.verbose() {
             eprintln!("join parallel: {}", self.parallel);
         };
-        let mut input_left = self.input_left.take().unwrap();
-        let mut input_right = self.input_right.take().unwrap();
+        let (input_left, input_right) = match (&mut self.input_left, &mut self.input_right) {
+            (Some(input_left), Some(input_right)) => (input_left, input_right),
+            _ => polars_bail!(
+                ComputeError:
+                "JoinExec was executed after its inputs were consumed"
+            ),
+        };
 
         let (df_left, df_right) = if self.parallel {
             let mut state_right = state.split();
@@ -58,8 +63,8 @@ impl Executor for JoinExec {
             state_right.branch_idx += 1;
 
             POOL.join(
-                move || input_left.execute(&mut state_left),
-                move || input_right.execute(&mut state_right),
+                || input_left.execute(&mut state_left),
+                || input_right.execute(&mut state_right),
             )
         } else {
             (input_left.execute(state), input_right.execute(state))

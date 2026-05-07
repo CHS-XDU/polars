@@ -42,6 +42,7 @@ impl IR {
             Union { .. } => Exprs::Empty,
             MapFunction { .. } => Exprs::Empty,
             DataFrameScan { .. } => Exprs::Empty,
+            ReusableDataFrameScan { .. } => Exprs::Empty,
             HConcat { .. } => Exprs::Empty,
             ExtContext { .. } => Exprs::Empty,
             SimpleProjection { .. } => Exprs::Empty,
@@ -114,6 +115,7 @@ impl IR {
             Union { .. } => ExprsMut::Empty,
             MapFunction { .. } => ExprsMut::Empty,
             DataFrameScan { .. } => ExprsMut::Empty,
+            ReusableDataFrameScan { .. } => ExprsMut::Empty,
             HConcat { .. } => ExprsMut::Empty,
             ExtContext { .. } => ExprsMut::Empty,
             SimpleProjection { .. } => ExprsMut::Empty,
@@ -212,6 +214,7 @@ impl IR {
             } => Inputs::Boxed(Box::new(iter::once(*input).chain(contexts.iter().copied()))),
             Scan { .. } => Inputs::Empty,
             DataFrameScan { .. } => Inputs::Empty,
+            ReusableDataFrameScan { .. } => Inputs::Empty,
             #[cfg(feature = "python")]
             PythonScan { .. } => Inputs::Empty,
             #[cfg(feature = "merge_sorted")]
@@ -251,6 +254,7 @@ impl IR {
             } => InputsMut::Boxed(Box::new(iter::once(input).chain(contexts.iter_mut()))),
             Scan { .. } => InputsMut::Empty,
             DataFrameScan { .. } => InputsMut::Empty,
+            ReusableDataFrameScan { .. } => InputsMut::Empty,
             #[cfg(feature = "python")]
             PythonScan { .. } => InputsMut::Empty,
             #[cfg(feature = "merge_sorted")]

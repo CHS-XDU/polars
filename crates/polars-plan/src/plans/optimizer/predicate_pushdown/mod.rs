@@ -340,6 +340,29 @@ impl PredicatePushDown {
 
                 Ok(lp)
             },
+            ReusableDataFrameScan {
+                source_id,
+                schema,
+                output_schema,
+                min_rows,
+                max_rows,
+            } => {
+                let selection = predicate_at_scan(acc_predicates, None, expr_arena);
+                let mut lp = ReusableDataFrameScan {
+                    source_id,
+                    schema,
+                    output_schema,
+                    min_rows,
+                    max_rows,
+                };
+
+                if let Some(predicate) = selection {
+                    let input = lp_arena.add(lp);
+                    lp = IR::Filter { input, predicate }
+                }
+
+                Ok(lp)
+            },
             Scan {
                 sources,
                 file_info,

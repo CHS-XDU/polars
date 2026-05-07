@@ -438,6 +438,7 @@ pub(crate) fn ir_removes_rows(ir: &IR) -> bool {
 
     match ir {
         DataFrameScan { .. }
+        | ReusableDataFrameScan { .. }
         | SimpleProjection { .. }
         | Select { .. }
         | Cache { .. }

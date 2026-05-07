@@ -412,6 +412,36 @@ impl ProjectionPushDown {
                 };
                 Ok(lp)
             },
+            ReusableDataFrameScan {
+                source_id,
+                schema,
+                mut output_schema,
+                min_rows,
+                max_rows,
+            } => {
+                if self.is_count_star {
+                    ctx.process_count_star_at_scan(&schema, expr_arena);
+                }
+                if ctx.has_pushed_down() {
+                    let new_schema = Arc::new(update_scan_schema(
+                        &ctx.acc_projections,
+                        expr_arena,
+                        &schema,
+                        false,
+                    )?);
+                    if *new_schema != *schema {
+                        output_schema = Some(new_schema);
+                    }
+                }
+                let lp = ReusableDataFrameScan {
+                    source_id,
+                    schema,
+                    output_schema,
+                    min_rows,
+                    max_rows,
+                };
+                Ok(lp)
+            },
             #[cfg(feature = "python")]
             PythonScan { mut options } => {
                 if self.is_count_star {

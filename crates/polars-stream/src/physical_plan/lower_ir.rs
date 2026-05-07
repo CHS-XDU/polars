@@ -9,7 +9,7 @@ use polars_core::scalar::Scalar;
 use polars_core::schema::Schema;
 use polars_core::series::Series;
 use polars_core::{SchemaExtPl, config};
-use polars_error::{PolarsResult, polars_ensure};
+use polars_error::{PolarsResult, polars_bail, polars_ensure};
 use polars_expr::state::ExecutionState;
 use polars_mem_engine::create_physical_plan;
 use polars_ops::frame::JoinType;
@@ -272,6 +272,14 @@ pub fn lower_ir(
             }
 
             node_kind
+        },
+
+        IR::ReusableDataFrameScan { source_id, .. } => {
+            polars_bail!(
+                ComputeError:
+                "reusable source '{}' does not support streaming execution",
+                source_id
+            )
         },
 
         IR::Sink { input, payload } => match payload {

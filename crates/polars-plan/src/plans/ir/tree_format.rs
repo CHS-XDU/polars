@@ -225,6 +225,37 @@ impl<'a> TreeFmtNode<'a> {
                             vec![],
                         )
                     },
+                    ReusableDataFrameScan {
+                        source_id,
+                        schema,
+                        output_schema,
+                        ..
+                    } => {
+                        let (n_columns, projected) = if let Some(schema) = output_schema {
+                            (
+                                format!("{}", schema.len()),
+                                format!(
+                                    ": {};",
+                                    format_list_truncated!(schema.iter_names(), 4, '"')
+                                ),
+                            )
+                        } else {
+                            ("*".to_string(), "".to_string())
+                        };
+                        ND(
+                            wh(
+                                h,
+                                &format!(
+                                    "REUSABLE DF {}\nPROJECT{} {}/{} COLUMNS",
+                                    source_id,
+                                    projected,
+                                    n_columns,
+                                    schema.len()
+                                ),
+                            ),
+                            vec![],
+                        )
+                    },
 
                     Union { inputs, .. } => ND(
                         wh(

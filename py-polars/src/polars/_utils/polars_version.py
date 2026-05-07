@@ -1,7 +1,7 @@
 try:
     import polars._plr as plr
 
-    _POLARS_VERSION = plr.__version__
+    _POLARS_VERSION = f"{plr.__version__}+chs.autocache.0"
 except ImportError:
     # This is only useful for documentation
     import warnings

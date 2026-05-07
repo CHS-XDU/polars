@@ -31,7 +31,7 @@ pub(super) fn process_projection(
         // If the input node is not aware of `is_count_star` we must project a single column from
         // this level, otherwise the upstream nodes may end up projecting everything.
         let input_is_count_star_aware = match input_lp {
-            IR::DataFrameScan { .. } | IR::Scan { .. } => true,
+            IR::DataFrameScan { .. } | IR::ReusableDataFrameScan { .. } | IR::Scan { .. } => true,
             #[cfg(feature = "python")]
             IR::PythonScan { .. } => true,
             _ => false,
