@@ -33,7 +33,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 # example: 1.35.0b1
-dependencies = ["polars-runtime-32 == 1.40.1"]
+dependencies = ["polars-runtime-32 == 1.40.1+chs.autocache.0"]
 
 [project.urls]
 Homepage = "https://www.pola.rs/"

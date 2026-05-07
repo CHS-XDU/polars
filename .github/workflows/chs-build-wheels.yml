@@ -1,0 +1,158 @@
+name: CHS Build Python Wheels
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "chs-autocache-*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.10"
+  EXPECTED_POLARS_VERSION: "1.40.1+chs.autocache.0"
+  CARGO_INCREMENTAL: "0"
+  CARGO_NET_RETRY: "10"
+  RUSTUP_MAX_RETRIES: "10"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  base-package:
+    name: Build pure Python polars package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install build tools
+        run: python -m pip install --upgrade pip uv
+
+      - name: Build polars wheel
+        run: python -m uv build py-polars --wheel --out-dir dist
+
+      - name: Upload polars wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: polars-python-wheel
+          path: dist/*.whl
+
+  runtime-wheels:
+    name: Build runtime wheel (${{ matrix.name }})
+    needs: [base-package]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64-manylinux
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: "2014"
+            rustflags: "-C target-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b"
+            cflags: "-msse3 -mssse3 -msse4.1 -msse4.2 -mpopcnt -mcx16"
+          - name: linux-aarch64-manylinux
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: "2014"
+            rustflags: ""
+            cflags: ""
+          - name: macos-arm64
+            os: macos-15
+            target: aarch64-apple-darwin
+            manylinux: "off"
+            rustflags: ""
+            cflags: ""
+          - name: macos-x86_64
+            os: macos-13
+            target: x86_64-apple-darwin
+            manylinux: "off"
+            rustflags: "-C target-feature=+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b"
+            cflags: "-msse3 -mssse3 -msse4.1 -msse4.2 -mpopcnt -mcx16"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download polars wheel
+        uses: actions/download-artifact@v7
+        with:
+          name: polars-python-wheel
+          path: dist
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-04-01
+          targets: ${{ matrix.target }}
+
+      - name: Build runtime wheel
+        uses: PyO3/maturin-action@v1
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+          CFLAGS: ${{ matrix.cflags }}
+        with:
+          command: build
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: >
+            --manifest-path py-polars/runtime/polars-runtime-32/Cargo.toml
+            --features backtrace_filter
+            --release
+            --out dist
+          maturin-version: 1.8.3
+
+      - name: Verify wheel install
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install --no-index --find-links dist \
+            "polars==${EXPECTED_POLARS_VERSION}" \
+            "polars-runtime-32==${EXPECTED_POLARS_VERSION}"
+          python - <<'PY'
+          import os
+          import polars as pl
+
+          expected = os.environ["EXPECTED_POLARS_VERSION"]
+          assert pl.__version__ == expected, (pl.__version__, expected)
+          assert not hasattr(pl, "reusable_frame")
+          assert not hasattr(pl.LazyFrame, "prepare")
+
+          os.environ["POLARS_AUTO_PLAN_CACHE"] = "1"
+
+          def run(values):
+              df = pl.DataFrame({"x": values, "y": [10, 20, 30]})
+              return (
+                  df.lazy()
+                  .filter(pl.col("x") > 1)
+                  .with_columns((pl.col("x") + pl.col("y")).alias("z"))
+                  .collect()
+                  .to_dicts()
+              )
+
+          assert run([1, 2, 3]) == [
+              {"x": 2, "y": 20, "z": 22},
+              {"x": 3, "y": 30, "z": 33},
+          ]
+          assert run([3, 2, 1]) == [
+              {"x": 3, "y": 10, "z": 13},
+              {"x": 2, "y": 20, "z": 22},
+          ]
+          print("CHS Polars wheel OK", pl.__version__)
+          PY
+
+      - name: Upload wheel bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: chs-polars-wheels-${{ matrix.name }}
+          path: dist/*.whl

@@ -3537,7 +3537,7 @@ dependencies = [
 
 [[package]]
 name = "polars-runtime-32"
-version = "1.40.1"
+version = "1.40.1+chs.autocache.0"
 dependencies = [
  "either",
  "libc",
